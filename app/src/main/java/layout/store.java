@@ -7,8 +7,17 @@ import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
+import android.widget.ListView;
+import android.widget.TextView;
 
+import com.plotsandschemes.arcade.MainActivity;
 import com.plotsandschemes.arcade.R;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+
+import static com.plotsandschemes.arcade.R.string.stuff;
 
 /**
  * A simple {@link Fragment} subclass.
@@ -23,10 +32,16 @@ public class store extends Fragment {
     // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
     private static final String ARG_PARAM1 = "param1";
     private static final String ARG_PARAM2 = "param2";
+    private static final String GAME_NAMES = "game_names";
 
     // TODO: Rename and change types of parameters
     private String mParam1;
     private String mParam2;
+
+    private MainActivity.AvailableGamesList games;
+    private ArrayList<String> gameNames;
+    private ArrayAdapter<String> adapter;
+    private ListView list;
 
     private OnFragmentInteractionListener mListener;
 
@@ -58,6 +73,11 @@ public class store extends Fragment {
         if (getArguments() != null) {
             mParam1 = getArguments().getString(ARG_PARAM1);
             mParam2 = getArguments().getString(ARG_PARAM2);
+//            games = mListener.getGamesList();
+//            gameNames = games.getGameNames();
+//            list = (ListView) getActivity().findViewById(R.id.list);
+//            adapter = new ArrayAdapter<String>(getActivity(),android.R.layout.simple_list_item_1, gameNames);
+//            list.setAdapter(adapter);
         }
     }
 
@@ -65,7 +85,8 @@ public class store extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_store, container, false);
+        View rootView = inflater.inflate(R.layout.fragment_store, container, false);
+        return rootView;
     }
 
     // TODO: Rename method, update argument and hook method into UI event
@@ -105,6 +126,8 @@ public class store extends Fragment {
     public interface OnFragmentInteractionListener {
         // TODO: Update argument type and name
         void onFragmentInteraction(Uri uri);
+
+        MainActivity.AvailableGamesList getGamesList();
     }
 
 

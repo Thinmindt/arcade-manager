@@ -18,13 +18,22 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
+import android.widget.ListView;
+import android.widget.TextView;
 
 import com.google.android.gms.appindexing.Action;
 import com.google.android.gms.appindexing.AppIndex;
 import com.google.android.gms.appindexing.Thing;
 import com.google.android.gms.common.api.GoogleApiClient;
 
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.LinkedList;
+
+import layout.store;
+
+import static com.plotsandschemes.arcade.R.string.stuff;
 
 public class MainActivity extends AppCompatActivity  {
 
@@ -48,9 +57,15 @@ public class MainActivity extends AppCompatActivity  {
      */
     private GoogleApiClient client;
 
+    public static AvailableGamesList gamesList;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        gamesList = new AvailableGamesList();
+        gamesList.getFullGamesList();
+
         setContentView(R.layout.activity_main);
 
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
@@ -139,6 +154,7 @@ public class MainActivity extends AppCompatActivity  {
          * fragment.
          */
         private static final String ARG_SECTION_NUMBER = "section_number";
+        private static final String GAME_NAMES = "game_names";
 
         public PlaceholderFragment() {
         }
@@ -160,6 +176,10 @@ public class MainActivity extends AppCompatActivity  {
                                  Bundle savedInstanceState) {
             if (getArguments().getInt(ARG_SECTION_NUMBER) == 1) {
                 View rootView = inflater.inflate(R.layout.fragment_store, container, false);
+
+                ArrayList<String> gameNames = MainActivity.gamesList.getGameNames();
+                ListView list = (ListView) rootView.findViewById(R.id.list);
+                list.setAdapter(new ArrayAdapter<String>(getActivity(),android.R.layout.simple_list_item_1, gameNames));
                 return rootView;
             }
             if (getArguments().getInt(ARG_SECTION_NUMBER) == 2) {
@@ -210,6 +230,21 @@ public class MainActivity extends AppCompatActivity  {
         }
     }
 
+    /**
+     * Allows the store tab to send data to MainActivity
+     */
+    public class StoreInterface implements store.OnFragmentInteractionListener {
+
+        @Override
+        public void onFragmentInteraction(Uri uri) {
+            // probably delete later
+        }
+
+        @Override
+        public AvailableGamesList getGamesList() {
+            return new AvailableGamesList();
+        }
+    }
 
     /**
      * A list of games that may be retrieved from the games server.
@@ -223,12 +258,28 @@ public class MainActivity extends AppCompatActivity  {
             getFullGamesList();
         }
 
+        public ArrayList<String> getGameNames() {
+            ArrayList<String> gameNames = new ArrayList<String>();
+            Iterator it = listOfGames.iterator();
+            while(it.hasNext()) {
+                Game game = (Game) it.next();
+                gameNames.add(game.getName());
+            }
+            return gameNames;
+        }
+
         void getFullGamesList() {
             // connect to server
 
             // get list of games in JSON
 
             // populate this.listOfGames
+
+            // but for now, just populate the games list with names of games to make
+            listOfGames.clear();
+            listOfGames.add(new Game("Tetris"));
+            listOfGames.add(new Game("Galaga"));
+            listOfGames.add(new Game("Asteroids"));
         }
 
         void checkForAPKs() {
@@ -258,7 +309,7 @@ public class MainActivity extends AppCompatActivity  {
             this.pathToAPK = null;
             this.isDownloaded = false;
         }
-1
+
         String getName() {
             return this.name;
         }
