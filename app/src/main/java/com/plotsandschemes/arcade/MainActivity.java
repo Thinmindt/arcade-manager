@@ -18,9 +18,11 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.android.gms.appindexing.Action;
 import com.google.android.gms.appindexing.AppIndex;
@@ -32,8 +34,6 @@ import java.util.Iterator;
 import java.util.LinkedList;
 
 import layout.store;
-
-import static com.plotsandschemes.arcade.R.string.stuff;
 
 public class MainActivity extends AppCompatActivity  {
 
@@ -154,7 +154,6 @@ public class MainActivity extends AppCompatActivity  {
          * fragment.
          */
         private static final String ARG_SECTION_NUMBER = "section_number";
-        private static final String GAME_NAMES = "game_names";
 
         public PlaceholderFragment() {
         }
@@ -174,17 +173,36 @@ public class MainActivity extends AppCompatActivity  {
         @Override
         public View onCreateView(LayoutInflater inflater, ViewGroup container,
                                  Bundle savedInstanceState) {
+            // implement store tab here
             if (getArguments().getInt(ARG_SECTION_NUMBER) == 1) {
                 View rootView = inflater.inflate(R.layout.fragment_store, container, false);
 
                 ArrayList<String> gameNames = MainActivity.gamesList.getGameNames();
                 ListView list = (ListView) rootView.findViewById(R.id.list);
                 list.setAdapter(new ArrayAdapter<String>(getActivity(),android.R.layout.simple_list_item_1, gameNames));
+
+                list.setClickable(true);
+                list.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                    public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                        String clickedGameName = ((TextView) view).getText().toString();
+                        Game clickedGame = MainActivity.gamesList.getGameByName(clickedGameName);
+
+                        String downloadConfirmation;
+                        if (clickedGame.download())
+                            downloadConfirmation = "Download Complete";
+                        else
+                            downloadConfirmation = "Failed to Downlaod";
+
+                        Toast.makeText(getActivity(), downloadConfirmation, Toast.LENGTH_SHORT).show();
+                    }
+                });
                 return rootView;
             }
+            // implement library here
             if (getArguments().getInt(ARG_SECTION_NUMBER) == 2) {
                 View rootView = inflater.inflate(R.layout.fragment_library, container, false);
                 return rootView;
+            // implement community here
             } else {
                 View rootView = inflater.inflate(R.layout.fragment_community, container, false);
                 return rootView;
@@ -240,10 +258,6 @@ public class MainActivity extends AppCompatActivity  {
             // probably delete later
         }
 
-        @Override
-        public AvailableGamesList getGamesList() {
-            return new AvailableGamesList();
-        }
     }
 
     /**
@@ -261,11 +275,21 @@ public class MainActivity extends AppCompatActivity  {
         public ArrayList<String> getGameNames() {
             ArrayList<String> gameNames = new ArrayList<String>();
             Iterator it = listOfGames.iterator();
-            while(it.hasNext()) {
+            while (it.hasNext()) {
                 Game game = (Game) it.next();
                 gameNames.add(game.getName());
             }
             return gameNames;
+        }
+
+        public Game getGameByName(String name) {
+            Iterator it = listOfGames.iterator();
+            while (it.hasNext()) {
+                Game game = (Game) it.next();
+                if (name == game.getName())
+                    return game;
+            }
+            return null;
         }
 
         void getFullGamesList() {
@@ -322,15 +346,17 @@ public class MainActivity extends AppCompatActivity  {
             this.pathToAPK = pathToAPK;
         }
 
-        void download() {
+        boolean download() {
             // connect to server
 
             // request game
+
 
             // place in filesystem
 
             // setPathToAPK( ... );
             // this.isDownloaded = true;
+            return false;
         }
 
         boolean checkIfDownloaded() {
