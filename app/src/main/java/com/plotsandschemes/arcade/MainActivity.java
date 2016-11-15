@@ -1,7 +1,9 @@
 package com.plotsandschemes.arcade;
 
+import android.content.Context;
 import android.graphics.Path;
 import android.net.Uri;
+import android.provider.ContactsContract;
 import android.support.design.widget.TabLayout;
 import android.support.v4.app.FragmentStatePagerAdapter;
 import android.support.v4.view.PagerAdapter;
@@ -29,10 +31,15 @@ import com.google.android.gms.appindexing.AppIndex;
 import com.google.android.gms.appindexing.Thing;
 import com.google.android.gms.common.api.GoogleApiClient;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 
+import it.sauronsoftware.ftp4j.FTPClient;
+import it.sauronsoftware.ftp4j.FTPException;
+import it.sauronsoftware.ftp4j.FTPIllegalReplyException;
 import layout.store;
 
 public class MainActivity extends AppCompatActivity  {
@@ -187,11 +194,22 @@ public class MainActivity extends AppCompatActivity  {
                         String clickedGameName = ((TextView) view).getText().toString();
                         Game clickedGame = MainActivity.gamesList.getGameByName(clickedGameName);
 
-                        String downloadConfirmation;
-                        if (clickedGame.download())
-                            downloadConfirmation = "Download Complete";
-                        else
-                            downloadConfirmation = "Failed to Downlaod";
+                        String downloadConfirmation = "";
+                        try {
+                            if (clickedGame.download())
+                                downloadConfirmation = "Download Complete";
+                            else
+                                downloadConfirmation = "Failed to Downlaod";
+                        } catch (FTPException e) {
+                            e.printStackTrace();
+                            downloadConfirmation = "FTPException";
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                            downloadConfirmation = "IOException";
+                        } catch (FTPIllegalReplyException e) {
+                            e.printStackTrace();
+                            downloadConfirmation = "IllegalReplyException";
+                        }
 
                         Toast.makeText(getActivity(), downloadConfirmation, Toast.LENGTH_SHORT).show();
                     }
@@ -317,7 +335,7 @@ public class MainActivity extends AppCompatActivity  {
     /**
      * A game contains meta info and path to apk in android filesystem for each game as needed.
      */
-    class Game {
+    private class Game {
         private String name;
         private Path pathToAPK;
         private boolean isDownloaded;
@@ -346,10 +364,19 @@ public class MainActivity extends AppCompatActivity  {
             this.pathToAPK = pathToAPK;
         }
 
-        boolean download() {
+        boolean download() throws FTPException, IOException, FTPIllegalReplyException {
             // connect to server
+            FTPClient client = new FTPClient();
+            client.connect("192.168.1.131", 80);
+            client.login("admin", "admin");
+            client.disconnect(true);
 
             // request game
+            // find apk in temporary location
+            //String fpGameToDownload = "";
+            //File currentDir = new File(Context.getFilesDir(), fpGameToDownload);
+            //File gameToDownload = new File(Context.getCacheDir());
+
 
 
             // place in filesystem
