@@ -1,8 +1,12 @@
 package com.plotsandschemes.arcade;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.Path;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.provider.ContactsContract;
 import android.support.design.widget.TabLayout;
 import android.support.v4.app.FragmentStatePagerAdapter;
@@ -31,8 +35,15 @@ import com.google.android.gms.appindexing.AppIndex;
 import com.google.android.gms.appindexing.Thing;
 import com.google.android.gms.common.api.GoogleApiClient;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.PrintWriter;
+import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -42,7 +53,7 @@ import it.sauronsoftware.ftp4j.FTPException;
 import it.sauronsoftware.ftp4j.FTPIllegalReplyException;
 import layout.store;
 
-public class MainActivity extends AppCompatActivity  {
+public class MainActivity extends AppCompatActivity {
 
     /**
      * The {@link PagerAdapter} that will provide
@@ -65,13 +76,13 @@ public class MainActivity extends AppCompatActivity  {
     private GoogleApiClient client;
 
     public static AvailableGamesList gamesList;
+    public static final String host = "192.168.1.131";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         gamesList = new AvailableGamesList();
-        gamesList.getFullGamesList();
 
         setContentView(R.layout.activity_main);
 
@@ -184,9 +195,12 @@ public class MainActivity extends AppCompatActivity  {
             if (getArguments().getInt(ARG_SECTION_NUMBER) == 1) {
                 View rootView = inflater.inflate(R.layout.fragment_store, container, false);
 
-                ArrayList<String> gameNames = MainActivity.gamesList.getGameNames();
+                ArrayList<String> gameNames = null;
+                do {
+                    gameNames = MainActivity.gamesList.getGameNames();
+                } while (gameNames == null);
                 ListView list = (ListView) rootView.findViewById(R.id.list);
-                list.setAdapter(new ArrayAdapter<String>(getActivity(),android.R.layout.simple_list_item_1, gameNames));
+                list.setAdapter(new ArrayAdapter<String>(getActivity(), android.R.layout.simple_list_item_1, gameNames));
 
                 list.setClickable(true);
                 list.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -200,15 +214,9 @@ public class MainActivity extends AppCompatActivity  {
                                 downloadConfirmation = "Download Complete";
                             else
                                 downloadConfirmation = "Failed to Downlaod";
-                        } catch (FTPException e) {
-                            e.printStackTrace();
-                            downloadConfirmation = "FTPException";
                         } catch (IOException e) {
                             e.printStackTrace();
                             downloadConfirmation = "IOException";
-                        } catch (FTPIllegalReplyException e) {
-                            e.printStackTrace();
-                            downloadConfirmation = "IllegalReplyException";
                         }
 
                         Toast.makeText(getActivity(), downloadConfirmation, Toast.LENGTH_SHORT).show();
@@ -220,7 +228,7 @@ public class MainActivity extends AppCompatActivity  {
             if (getArguments().getInt(ARG_SECTION_NUMBER) == 2) {
                 View rootView = inflater.inflate(R.layout.fragment_library, container, false);
                 return rootView;
-            // implement community here
+                // implement community here
             } else {
                 View rootView = inflater.inflate(R.layout.fragment_community, container, false);
                 return rootView;
@@ -311,23 +319,29 @@ public class MainActivity extends AppCompatActivity  {
         }
 
         void getFullGamesList() {
-            // connect to server
+            String request = "gamesList";
+            ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+            NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
+            if (networkInfo != null && networkInfo.isConnected()) {
+                new serverRequestGamesList().execute(request);
+            } else {
+                listOfGames.clear();
+                Toast.makeText(getApplicationContext(), "No network connection", Toast.LENGTH_SHORT).show();
+            }
+        }
 
-            // get list of games in JSON
-
-            // populate this.listOfGames
-
-            // but for now, just populate the games list with names of games to make
+        void clear() {
             listOfGames.clear();
-            listOfGames.add(new Game("Tetris"));
-            listOfGames.add(new Game("Galaga"));
-            listOfGames.add(new Game("Asteroids"));
         }
 
         void checkForAPKs() {
             // iterate through listOfGames
             // check filesystem for APK
             // if APK exists, set pathToAPK and isDownloaded
+        }
+
+        void addGame(Game game) {
+            listOfGames.add(game);
         }
     }
 
@@ -364,30 +378,124 @@ public class MainActivity extends AppCompatActivity  {
             this.pathToAPK = pathToAPK;
         }
 
-        boolean download() throws FTPException, IOException, FTPIllegalReplyException {
+        boolean download() throws IOException {
             // connect to server
-            FTPClient client = new FTPClient();
-            client.connect("192.168.1.131", 80);
-            client.login("admin", "admin");
-            client.disconnect(true);
+            String request = "download:" + name;
+            ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+            NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
+            if (networkInfo != null && networkInfo.isConnected()) {
+                new serverRequestGameDownload().execute(request);
+            } else {
+                Toast.makeText(getApplicationContext(), "No network connection", Toast.LENGTH_SHORT).show();
+            }
 
-            // request game
-            // find apk in temporary location
-            //String fpGameToDownload = "";
-            //File currentDir = new File(Context.getFilesDir(), fpGameToDownload);
-            //File gameToDownload = new File(Context.getCacheDir());
-
-
-
-            // place in filesystem
-
-            // setPathToAPK( ... );
-            // this.isDownloaded = true;
             return false;
         }
 
         boolean checkIfDownloaded() {
             return isDownloaded;
+        }
+    }
+
+    private class serverRequest extends AsyncTask<String, Void, byte[]> {
+
+        @Override
+        protected byte[] doInBackground(String... request) {
+            byte[] gamesFromServer = new byte[1024];
+            try {
+                Socket client = new Socket(host, 2121);
+
+                sendRequest(client, request[0]);
+
+                byte[] response = getResponse(client);
+
+                return response;
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            return gamesFromServer;
+        }
+
+        private byte[] getResponse(Socket client) {
+            InputStream in = null;
+            byte[] gamesFromServer = new byte[1024];
+            try {
+                in = client.getInputStream();
+                ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+
+                int nRead;
+                while ((nRead = in.read(gamesFromServer, 0, gamesFromServer.length)) != -1) {
+                    buffer.write(gamesFromServer, 0, nRead);
+                }
+
+                buffer.flush();
+                client.close();
+
+                return buffer.toByteArray();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            return gamesFromServer;
+        }
+
+        boolean sendRequest(Socket socket, String request) {
+            try {
+                OutputStream toServer = socket.getOutputStream();
+                PrintWriter messageToServer = new PrintWriter(toServer, true);
+                messageToServer.println(request);
+                return true;
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            return false;
+        }
+    }
+
+    private class serverRequestGamesList extends serverRequest {
+        @Override
+        protected void onPostExecute(byte[] result) {
+
+            String gamesFromServer = new String(result);
+            MainActivity.gamesList.clear();
+
+            int i = 0;
+            while (gamesFromServer != null) {
+                int start = 0;
+                int end = gamesFromServer.length();
+                if (gamesFromServer.contains(",")) {
+                    end = gamesFromServer.indexOf(",");
+                }
+                String gameName = gamesFromServer.substring(start, end);
+
+                if (end < gamesFromServer.length())
+                    gamesFromServer = gamesFromServer.substring(end + 1, gamesFromServer.length());
+                else
+                    gamesFromServer = null;
+
+                MainActivity.gamesList.addGame(new Game(gameName));
+                i++;
+            }
+        }
+    }
+
+    private class serverRequestGameDownload extends serverRequest {
+        @Override
+        protected void onPostExecute(byte[] result) {
+
+            String fpGameToDownload = "Tetris";
+            File downloadFile = new File(getFilesDir(), fpGameToDownload);
+            try {
+                FileOutputStream stream = new FileOutputStream(downloadFile);
+                stream.write(result);
+                stream.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            // set PathToAPK (or set something so that the library tab knows where to find it)
+            // Game game = new Game();
+            // this.isDownloaded = true;
         }
     }
 }
