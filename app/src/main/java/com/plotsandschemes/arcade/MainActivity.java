@@ -1,24 +1,22 @@
 package com.plotsandschemes.arcade;
 
 import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.Path;
+import android.content.Intent;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.AsyncTask;
-import android.provider.ContactsContract;
+import android.os.Bundle;
+import android.os.Environment;
 import android.support.design.widget.TabLayout;
-import android.support.v4.app.FragmentStatePagerAdapter;
-import android.support.v4.view.PagerAdapter;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
-
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentPagerAdapter;
+import android.support.v4.app.FragmentStatePagerAdapter;
+import android.support.v4.view.PagerAdapter;
 import android.support.v4.view.ViewPager;
-import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.Toolbar;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -35,7 +33,6 @@ import com.google.android.gms.appindexing.AppIndex;
 import com.google.android.gms.appindexing.Thing;
 import com.google.android.gms.common.api.GoogleApiClient;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -48,9 +45,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 
-import it.sauronsoftware.ftp4j.FTPClient;
-import it.sauronsoftware.ftp4j.FTPException;
-import it.sauronsoftware.ftp4j.FTPIllegalReplyException;
 import layout.store;
 
 public class MainActivity extends AppCompatActivity {
@@ -195,7 +189,7 @@ public class MainActivity extends AppCompatActivity {
             if (getArguments().getInt(ARG_SECTION_NUMBER) == 1) {
                 View rootView = inflater.inflate(R.layout.fragment_store, container, false);
 
-                ArrayList<String> gameNames = null;
+                ArrayList<String> gameNames;
                 do {
                     gameNames = MainActivity.gamesList.getGameNames();
                 } while (gameNames == null);
@@ -228,7 +222,8 @@ public class MainActivity extends AppCompatActivity {
             if (getArguments().getInt(ARG_SECTION_NUMBER) == 2) {
                 View rootView = inflater.inflate(R.layout.fragment_library, container, false);
                 return rootView;
-                // implement community here
+
+            // implement community here
             } else {
                 View rootView = inflater.inflate(R.layout.fragment_community, container, false);
                 return rootView;
@@ -312,7 +307,7 @@ public class MainActivity extends AppCompatActivity {
             Iterator it = listOfGames.iterator();
             while (it.hasNext()) {
                 Game game = (Game) it.next();
-                if (name == game.getName())
+                if (game.getName().contains(name));
                     return game;
             }
             return null;
@@ -351,10 +346,10 @@ public class MainActivity extends AppCompatActivity {
      */
     private class Game {
         private String name;
-        private Path pathToAPK;
+        private String pathToAPK;
         private boolean isDownloaded;
 
-        Game(String name, Path pathToAPK) {
+        Game(String name, String pathToAPK) {
             this.name = name;
             this.pathToAPK = pathToAPK;
             this.isDownloaded = true;
@@ -370,11 +365,11 @@ public class MainActivity extends AppCompatActivity {
             return this.name;
         }
 
-        Path getPathToAPK() {
+        String getPathToAPK() {
             return pathToAPK;
         }
 
-        void setPathToAPK(Path pathToAPK) {
+        void setPathToAPK(String pathToAPK) {
             this.pathToAPK = pathToAPK;
         }
 
@@ -392,6 +387,17 @@ public class MainActivity extends AppCompatActivity {
             return false;
         }
 
+        void setIsDownloaded() {
+            isDownloaded = true;
+        }
+
+        void install() {
+            Intent intent = new Intent(Intent.ACTION_VIEW);
+            intent.setDataAndType(Uri.fromFile(new File(pathToAPK)), "application/vnd.android.package-archive");
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
+        }
+
         boolean checkIfDownloaded() {
             return isDownloaded;
         }
@@ -401,7 +407,7 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         protected byte[] doInBackground(String... request) {
-            byte[] gamesFromServer = new byte[1024];
+            byte[] gamesFromServer = new byte[3000000];
             try {
                 Socket client = new Socket(host, 2121);
 
@@ -416,9 +422,9 @@ public class MainActivity extends AppCompatActivity {
             return gamesFromServer;
         }
 
-        private byte[] getResponse(Socket client) {
-            InputStream in = null;
-            byte[] gamesFromServer = new byte[1024];
+        byte[] getResponse(Socket client) {
+            InputStream in;
+            byte[] gamesFromServer = new byte[3000000];
             try {
                 in = client.getInputStream();
                 ByteArrayOutputStream buffer = new ByteArrayOutputStream();
@@ -480,22 +486,49 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private class serverRequestGameDownload extends serverRequest {
+
+        @Override
+        protected byte[] doInBackground(String... request) {
+            byte[] gamesFromServer = new byte[3000000];
+            try {
+                Socket client = new Socket(host, 2121);
+
+                sendRequest(client, request[0]);
+
+                gamesFromServer = getResponse(client);
+
+                return gamesFromServer;
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            return gamesFromServer;
+        }
+
         @Override
         protected void onPostExecute(byte[] result) {
+            String fpGameToDownload = "Tetris.apk";
+            File downloadFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), fpGameToDownload);
+            FileOutputStream stream ;
 
-            String fpGameToDownload = "Tetris";
-            File downloadFile = new File(getFilesDir(), fpGameToDownload);
             try {
-                FileOutputStream stream = new FileOutputStream(downloadFile);
+                if (downloadFile.exists()) {
+                    downloadFile.delete();
+                }
+                stream = new FileOutputStream(downloadFile);
+
+                //stream.write(result);
                 stream.write(result);
                 stream.close();
+
             } catch (IOException e) {
                 e.printStackTrace();
             }
 
-            // set PathToAPK (or set something so that the library tab knows where to find it)
-            // Game game = new Game();
-            // this.isDownloaded = true;
+            Game game = MainActivity.gamesList.getGameByName("Tetris");
+            game.setPathToAPK(downloadFile.getAbsolutePath());
+
+            game.setIsDownloaded();
+            game.install();
         }
     }
 }
