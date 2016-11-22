@@ -1,5 +1,7 @@
 package com.plotsandschemes.arcade;
 
+import android.Manifest;
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.net.ConnectivityManager;
@@ -9,10 +11,12 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.design.widget.TabLayout;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.app.FragmentStatePagerAdapter;
+import android.support.v4.content.ContextCompat;
 import android.support.v4.view.PagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.AppCompatActivity;
@@ -35,6 +39,8 @@ import com.google.android.gms.common.api.GoogleApiClient;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -47,8 +53,11 @@ import java.util.LinkedList;
 
 import layout.store;
 
+import static android.support.v4.content.PermissionChecker.PERMISSION_DENIED;
+
 public class MainActivity extends AppCompatActivity {
 
+    private static final int MY_PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE = 25;
     /**
      * The {@link PagerAdapter} that will provide
      * fragments for each of the sections. We use a
@@ -208,7 +217,7 @@ public class MainActivity extends AppCompatActivity {
                                 downloadConfirmation = "Download Complete";
                             else
                                 downloadConfirmation = "Failed to Downlaod";
-                        } catch (IOException e) {
+                        } catch (Exception e) {
                             e.printStackTrace();
                             downloadConfirmation = "IOException";
                         }
@@ -373,18 +382,57 @@ public class MainActivity extends AppCompatActivity {
             this.pathToAPK = pathToAPK;
         }
 
-        boolean download() throws IOException {
-            // connect to server
-            String request = "download:" + name;
-            ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-            NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
-            if (networkInfo != null && networkInfo.isConnected()) {
-                new serverRequestGameDownload().execute(request);
-            } else {
-                Toast.makeText(getApplicationContext(), "No network connection", Toast.LENGTH_SHORT).show();
+//        boolean download() throws IOException {
+//            // connect to server
+//            String request = "download:" + name;
+//            ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+//            NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
+//            if (networkInfo != null && networkInfo.isConnected()) {
+//                new serverRequestGameDownload().execute(request);
+//            } else {
+//                Toast.makeText(getApplicationContext(), "No network connection", Toast.LENGTH_SHORT).show();
+//            }
+//
+//            return false;
+//        }
+
+        boolean download() {
+            InputStream inStream;
+            OutputStream outStream;
+            int permissionCheck = ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.READ_EXTERNAL_STORAGE);
+            if (permissionCheck == PERMISSION_DENIED) {
+                ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, MY_PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE);
             }
 
-            return false;
+            try {
+                File fromServer = new File("storage/emulated/0/Arcade/FromServer/" + name + ".apk");
+                File toDownloads = new File("storage/emulated/0/Arcade/Downloads/" + name + ".apk");
+
+                File downloadDirectory = new File("storage/emulated/0/Arcade/Downloads/");
+                if (!downloadDirectory.exists()) {
+                    downloadDirectory.mkdirs();
+                }
+
+                inStream = new FileInputStream(fromServer);
+                outStream = new FileOutputStream(toDownloads);
+
+                byte[] buffer = new byte[1024];
+                int length;
+                while ((length = inStream.read(buffer)) > 0) {
+                    outStream.write(buffer, 0, length);
+                }
+
+                inStream.close();
+
+                outStream.flush();
+                outStream.close();
+
+                install();
+                return true;
+            } catch (IOException e) {
+                e.printStackTrace();
+                return false;
+            }
         }
 
         void setIsDownloaded() {
@@ -393,7 +441,7 @@ public class MainActivity extends AppCompatActivity {
 
         void install() {
             Intent intent = new Intent(Intent.ACTION_VIEW);
-            intent.setDataAndType(Uri.fromFile(new File(pathToAPK)), "application/vnd.android.package-archive");
+            intent.setDataAndType(Uri.fromFile(new File("storage/emulated/0/Arcade/FromServer/" + name + ".apk")), "application/vnd.android.package-archive");
             intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(intent);
         }
