@@ -227,14 +227,14 @@ public class MainActivity extends AppCompatActivity {
                 });
                 return rootView;
             }
-            // implement library here
+            // implement community here
             if (getArguments().getInt(ARG_SECTION_NUMBER) == 2) {
-                View rootView = inflater.inflate(R.layout.fragment_library, container, false);
+                View rootView = inflater.inflate(R.layout.fragment_community, container, false);
                 return rootView;
 
-            // implement community here
+            // removed tab
             } else {
-                View rootView = inflater.inflate(R.layout.fragment_community, container, false);
+                View rootView = inflater.inflate(R.layout.fragment_library, container, false);
                 return rootView;
             }
 
@@ -261,17 +261,15 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public int getCount() {
             // Show 3 total pages.
-            return 3;
+            return 2;
         }
 
         @Override
         public CharSequence getPageTitle(int position) {
             switch (position) {
                 case 0:
-                    return "Store";
+                    return "Arcade";
                 case 1:
-                    return "Library";
-                case 2:
                     return "Community";
             }
             return null;
@@ -446,7 +444,7 @@ public class MainActivity extends AppCompatActivity {
             startActivity(intent);
         }
 
-        boolean checkIfDownloaded() {
+        boolean getIsDownloaded() {
             return isDownloaded;
         }
     }
