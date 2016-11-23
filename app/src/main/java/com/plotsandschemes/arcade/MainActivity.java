@@ -4,6 +4,7 @@ import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
@@ -198,33 +199,7 @@ public class MainActivity extends AppCompatActivity {
             if (getArguments().getInt(ARG_SECTION_NUMBER) == 1) {
                 View rootView = inflater.inflate(R.layout.fragment_store, container, false);
 
-                ArrayList<String> gameNames;
-                do {
-                    gameNames = MainActivity.gamesList.getGameNames();
-                } while (gameNames == null);
-                ListView list = (ListView) rootView.findViewById(R.id.list);
-                list.setAdapter(new ArrayAdapter<String>(getActivity(), android.R.layout.simple_list_item_1, gameNames));
-
-                list.setClickable(true);
-                list.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-                    public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                        String clickedGameName = ((TextView) view).getText().toString();
-                        Game clickedGame = MainActivity.gamesList.getGameByName(clickedGameName);
-
-                        String downloadConfirmation = "";
-                        try {
-                            if (clickedGame.download())
-                                downloadConfirmation = "Download Complete";
-                            else
-                                downloadConfirmation = "Failed to Downlaod";
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                            downloadConfirmation = "IOException";
-                        }
-
-                        Toast.makeText(getActivity(), downloadConfirmation, Toast.LENGTH_SHORT).show();
-                    }
-                });
+                rootView = populateGamesList(rootView);
                 return rootView;
             }
             // implement community here
@@ -239,6 +214,43 @@ public class MainActivity extends AppCompatActivity {
             }
 
         }
+
+        View populateGamesList(View rootView) {
+            ArrayList<String> gameNames;
+            do {
+                gameNames = MainActivity.gamesList.getGameNames();
+            } while (gameNames == null);
+            ListView list = (ListView) rootView.findViewById(R.id.list);
+            list.setAdapter(new ArrayAdapter<String>(getActivity(), android.R.layout.simple_list_item_1, gameNames));
+
+            list.setClickable(true);
+            list.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                    String clickedGameName = ((TextView) view).getText().toString();
+                    Game clickedGame = MainActivity.gamesList.getGameByName(clickedGameName);
+
+                    if (!clickedGame.isInstalled) {
+                        String downloadConfirmation = "";
+                        try {
+                            if (clickedGame.download())
+                                downloadConfirmation = "Download Complete";
+                            else
+                                downloadConfirmation = "Failed to Downlaod";
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            downloadConfirmation = "IOException";
+                        }
+
+                        Toast.makeText(getActivity(), downloadConfirmation, Toast.LENGTH_SHORT).show();
+                    }
+                    else {
+                        clickedGame.launch();
+                    }
+                }
+            });
+            return rootView;
+        }
+
     }
 
     /**
@@ -355,17 +367,19 @@ public class MainActivity extends AppCompatActivity {
         private String name;
         private String pathToAPK;
         private boolean isDownloaded;
+        private boolean isInstalled;
 
-        Game(String name, String pathToAPK) {
-            this.name = name;
-            this.pathToAPK = pathToAPK;
-            this.isDownloaded = true;
-        }
 
         Game(String name) {
             this.name = name;
             this.pathToAPK = null;
             this.isDownloaded = false;
+            this.isInstalled = false;
+            if (this.isInstalled = true) {
+                isDownloaded = true;
+                isInstalled = true;
+                pathToAPK = "storage/emulated/0/Arcade/Downloads/" + name + ".apk";
+            }
         }
 
         String getName() {
@@ -426,11 +440,33 @@ public class MainActivity extends AppCompatActivity {
                 outStream.close();
 
                 install();
+                isDownloaded = true;
                 return true;
             } catch (IOException e) {
                 e.printStackTrace();
                 return false;
             }
+        }
+
+        void launch() {
+            Intent launch = getPackageManager().getLaunchIntentForPackage("com.android.calculator2");
+
+            if (launch != null) {
+                startActivity(launch);
+            }
+            else isInstalled = false;
+        }
+
+        void checkIfInstalled() {
+            boolean installed = false;
+            try {
+                PackageManager pm = getPackageManager();
+                pm.getPackageInfo("com.android.calculator", PackageManager.GET_ACTIVITIES);
+                installed = true;
+            } catch (PackageManager.NameNotFoundException e) {
+                e.printStackTrace();
+            }
+            isInstalled = installed;
         }
 
         void setIsDownloaded() {
@@ -524,6 +560,8 @@ public class MainActivity extends AppCompatActivity {
                     gamesFromServer = gamesFromServer.substring(end + 1, gamesFromServer.length());
                 else
                     gamesFromServer = null;
+
+
 
                 MainActivity.gamesList.addGame(new Game(gameName));
                 i++;
