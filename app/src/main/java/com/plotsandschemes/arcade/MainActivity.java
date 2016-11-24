@@ -51,6 +51,7 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
 
 import layout.store;
 
@@ -226,11 +227,11 @@ public class MainActivity extends AppCompatActivity {
             list.setClickable(true);
             list.setOnItemClickListener(new AdapterView.OnItemClickListener() {
                 public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                    String clickedGameName = ((TextView) view).getText().toString();
+                    String clickedGameName =  (String) parent.getItemAtPosition(position);
                     Game clickedGame = MainActivity.gamesList.getGameByName(clickedGameName);
 
                     if (!clickedGame.isInstalled) {
-                        String downloadConfirmation = "";
+                        String downloadConfirmation;
                         try {
                             if (clickedGame.download())
                                 downloadConfirmation = "Download Complete";
@@ -250,7 +251,12 @@ public class MainActivity extends AppCompatActivity {
             });
             return rootView;
         }
+    }
 
+    public class CustomListViewAdapter extends ArrayAdapter<String> {
+        Context context;
+
+        public CustomListViewAdapter(Context context, int resourceId, List<String> )
     }
 
     /**
@@ -326,8 +332,9 @@ public class MainActivity extends AppCompatActivity {
             Iterator it = listOfGames.iterator();
             while (it.hasNext()) {
                 Game game = (Game) it.next();
-                if (game.getName().contains(name));
+                if (game.getName() == name) {
                     return game;
+                }
             }
             return null;
         }
@@ -375,7 +382,8 @@ public class MainActivity extends AppCompatActivity {
             this.pathToAPK = null;
             this.isDownloaded = false;
             this.isInstalled = false;
-            if (this.isInstalled = true) {
+            checkIfInstalled();
+            if (isInstalled) {
                 isDownloaded = true;
                 isInstalled = true;
                 pathToAPK = "storage/emulated/0/Arcade/Downloads/" + name + ".apk";
@@ -416,9 +424,12 @@ public class MainActivity extends AppCompatActivity {
                 ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, MY_PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE);
             }
 
+            File toDownloads = new File("storage/emulated/0/Arcade/Downloads/" + name + ".apk");
+            if (toDownloads.exists()) {
+                install();
+            }
             try {
                 File fromServer = new File("storage/emulated/0/Arcade/FromServer/" + name + ".apk");
-                File toDownloads = new File("storage/emulated/0/Arcade/Downloads/" + name + ".apk");
 
                 File downloadDirectory = new File("storage/emulated/0/Arcade/Downloads/");
                 if (!downloadDirectory.exists()) {
@@ -439,7 +450,7 @@ public class MainActivity extends AppCompatActivity {
                 outStream.flush();
                 outStream.close();
 
-                install();
+
                 isDownloaded = true;
                 return true;
             } catch (IOException e) {
@@ -449,7 +460,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         void launch() {
-            Intent launch = getPackageManager().getLaunchIntentForPackage("com.android.calculator2");
+            Intent launch = getPackageManager().getLaunchIntentForPackage("com.dops." + name.toLowerCase());
 
             if (launch != null) {
                 startActivity(launch);
@@ -461,7 +472,7 @@ public class MainActivity extends AppCompatActivity {
             boolean installed = false;
             try {
                 PackageManager pm = getPackageManager();
-                pm.getPackageInfo("com.android.calculator", PackageManager.GET_ACTIVITIES);
+                pm.getPackageInfo("com.dops." + name.toLowerCase(), PackageManager.GET_ACTIVITIES);
                 installed = true;
             } catch (PackageManager.NameNotFoundException e) {
                 e.printStackTrace();
@@ -475,9 +486,10 @@ public class MainActivity extends AppCompatActivity {
 
         void install() {
             Intent intent = new Intent(Intent.ACTION_VIEW);
-            intent.setDataAndType(Uri.fromFile(new File("storage/emulated/0/Arcade/FromServer/" + name + ".apk")), "application/vnd.android.package-archive");
+            intent.setDataAndType(Uri.fromFile(new File("storage/emulated/0/Arcade/Downloads/" + name + ".apk")), "application/vnd.android.package-archive");
             intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(intent);
+            isInstalled = true;
         }
 
         boolean getIsDownloaded() {
@@ -560,8 +572,6 @@ public class MainActivity extends AppCompatActivity {
                     gamesFromServer = gamesFromServer.substring(end + 1, gamesFromServer.length());
                 else
                     gamesFromServer = null;
-
-
 
                 MainActivity.gamesList.addGame(new Game(gameName));
                 i++;
