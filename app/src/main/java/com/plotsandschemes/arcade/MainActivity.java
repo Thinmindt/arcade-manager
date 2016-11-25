@@ -253,11 +253,11 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public class CustomListViewAdapter extends ArrayAdapter<String> {
-        Context context;
-
-        public CustomListViewAdapter(Context context, int resourceId, List<String> )
-    }
+//    public class CustomListViewAdapter extends ArrayAdapter<String> {
+//        Context context;
+//
+//        //public CustomListViewAdapter(Context context, int resourceId, List<String> )
+//    }
 
     /**
      * A {@link FragmentPagerAdapter} that returns a fragment corresponding to
