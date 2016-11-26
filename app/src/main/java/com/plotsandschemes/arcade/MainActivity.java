@@ -216,19 +216,19 @@ public class MainActivity extends AppCompatActivity {
 
         }
 
-        View populateGamesList(View rootView) {
+        View populateGamesList(final View rootView) {
             ArrayList<String> gameNames;
             do {
                 gameNames = MainActivity.gamesList.getGameNames();
-            } while (gameNames == null);
+            } while (gameNames.size() < 3);
             ListView list = (ListView) rootView.findViewById(R.id.list);
-            list.setAdapter(new ArrayAdapter<String>(getActivity(), android.R.layout.simple_list_item_1, gameNames));
+            list.setAdapter(new CustomListViewAdapter(getActivity(), R.layout.itemlistrow, MainActivity.gamesList));
 
             list.setClickable(true);
             list.setOnItemClickListener(new AdapterView.OnItemClickListener() {
                 public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                    String clickedGameName =  (String) parent.getItemAtPosition(position);
-                    Game clickedGame = MainActivity.gamesList.getGameByName(clickedGameName);
+                    Game clickedGame =  (Game) parent.getItemAtPosition(position);
+                    //Game clickedGame = MainActivity.gamesList.getGameByName(clickedGameName);
 
                     if (!clickedGame.isInstalled) {
                         String downloadConfirmation;
@@ -243,6 +243,7 @@ public class MainActivity extends AppCompatActivity {
                         }
 
                         Toast.makeText(getActivity(), downloadConfirmation, Toast.LENGTH_SHORT).show();
+                        populateGamesList(rootView);
                     }
                     else {
                         clickedGame.launch();
@@ -252,12 +253,50 @@ public class MainActivity extends AppCompatActivity {
             return rootView;
         }
     }
+    public static class CustomListViewAdapter extends ArrayAdapter<Game> {
+        Context context;
 
-//    public class CustomListViewAdapter extends ArrayAdapter<String> {
-//        Context context;
-//
-//        //public CustomListViewAdapter(Context context, int resourceId, List<String> )
-//    }
+        public CustomListViewAdapter(Context context, int resourceId) {
+            super(context, resourceId);
+        }
+
+        public CustomListViewAdapter(Context context, int resource, AvailableGamesList gamesList) {
+            super(context, resource, gamesList.getLinkedListOfGames());
+        }
+
+        @Override
+        public View getView(int position, View convertView, ViewGroup parent) {
+            View v = convertView;
+
+            if (v == null) {
+                LayoutInflater vi;
+                vi = LayoutInflater.from(getContext());
+                v = vi.inflate(R.layout.itemlistrow, null);
+            }
+
+            Game game = getItem(position);
+
+            if (game != null) {
+                TextView titleText = (TextView) v.findViewById(R.id.id);
+                TextView downloadStatus = (TextView) v.findViewById(R.id.description);
+
+                if (titleText != null) {
+                    titleText.setText(game.getName());
+                }
+
+                if (downloadStatus != null) {
+                    if (game.getIsInstalled()) {
+                        downloadStatus.setText("Launch Game");
+                    } else if (game.getIsDownloaded()) {
+                        downloadStatus.setText("Install");
+                    } else {
+                        downloadStatus.setText("Download");
+                    }
+                }
+            }
+            return v;
+        }
+    }
 
     /**
      * A {@link FragmentPagerAdapter} that returns a fragment corresponding to
@@ -326,6 +365,10 @@ public class MainActivity extends AppCompatActivity {
                 gameNames.add(game.getName());
             }
             return gameNames;
+        }
+
+        public LinkedList<Game> getLinkedListOfGames() {
+            return listOfGames;
         }
 
         public Game getGameByName(String name) {
@@ -427,35 +470,38 @@ public class MainActivity extends AppCompatActivity {
             File toDownloads = new File("storage/emulated/0/Arcade/Downloads/" + name + ".apk");
             if (toDownloads.exists()) {
                 install();
-            }
-            try {
-                File fromServer = new File("storage/emulated/0/Arcade/FromServer/" + name + ".apk");
-
-                File downloadDirectory = new File("storage/emulated/0/Arcade/Downloads/");
-                if (!downloadDirectory.exists()) {
-                    downloadDirectory.mkdirs();
-                }
-
-                inStream = new FileInputStream(fromServer);
-                outStream = new FileOutputStream(toDownloads);
-
-                byte[] buffer = new byte[1024];
-                int length;
-                while ((length = inStream.read(buffer)) > 0) {
-                    outStream.write(buffer, 0, length);
-                }
-
-                inStream.close();
-
-                outStream.flush();
-                outStream.close();
-
-
-                isDownloaded = true;
                 return true;
-            } catch (IOException e) {
-                e.printStackTrace();
-                return false;
+            }
+            else {
+                try {
+                    File fromServer = new File("storage/emulated/0/Arcade/FromServer/" + name + ".apk");
+
+                    File downloadDirectory = new File("storage/emulated/0/Arcade/Downloads/");
+                    if (!downloadDirectory.exists()) {
+                        downloadDirectory.mkdirs();
+                    }
+
+                    inStream = new FileInputStream(fromServer);
+                    outStream = new FileOutputStream(toDownloads);
+
+                    byte[] buffer = new byte[1024];
+                    int length;
+                    while ((length = inStream.read(buffer)) > 0) {
+                        outStream.write(buffer, 0, length);
+                    }
+
+                    inStream.close();
+
+                    outStream.flush();
+                    outStream.close();
+
+
+                    isDownloaded = true;
+                    return true;
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    return false;
+                }
             }
         }
 
@@ -469,15 +515,14 @@ public class MainActivity extends AppCompatActivity {
         }
 
         void checkIfInstalled() {
-            boolean installed = false;
             try {
                 PackageManager pm = getPackageManager();
                 pm.getPackageInfo("com.dops." + name.toLowerCase(), PackageManager.GET_ACTIVITIES);
-                installed = true;
+                isInstalled = true;
             } catch (PackageManager.NameNotFoundException e) {
                 e.printStackTrace();
+                isInstalled = false;
             }
-            isInstalled = installed;
         }
 
         void setIsDownloaded() {
@@ -488,13 +533,15 @@ public class MainActivity extends AppCompatActivity {
             Intent intent = new Intent(Intent.ACTION_VIEW);
             intent.setDataAndType(Uri.fromFile(new File("storage/emulated/0/Arcade/Downloads/" + name + ".apk")), "application/vnd.android.package-archive");
             intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(intent);
             isInstalled = true;
+            startActivity(intent);
         }
 
         boolean getIsDownloaded() {
             return isDownloaded;
         }
+
+        boolean getIsInstalled() { return isInstalled; }
     }
 
     private class serverRequest extends AsyncTask<String, Void, byte[]> {
