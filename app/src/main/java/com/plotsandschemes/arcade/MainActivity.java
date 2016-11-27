@@ -81,7 +81,7 @@ public class MainActivity extends AppCompatActivity {
     private GoogleApiClient client;
 
     public static AvailableGamesList gamesList;
-    public static final String host = "192.168.1.131";
+    public static final String host = "arcade.plotsandschemes.com";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
