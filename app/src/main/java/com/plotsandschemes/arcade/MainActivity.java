@@ -22,6 +22,7 @@ import android.support.v4.view.PagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.text.Editable;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -29,6 +30,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -52,6 +55,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.Executor;
 
 import layout.store;
 
@@ -60,6 +64,8 @@ import static android.support.v4.content.PermissionChecker.PERMISSION_DENIED;
 public class MainActivity extends AppCompatActivity {
 
     private static final int MY_PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE = 25;
+    private static boolean loggedIn;
+
     /**
      * The {@link PagerAdapter} that will provide
      * fragments for each of the sections. We use a
@@ -81,13 +87,18 @@ public class MainActivity extends AppCompatActivity {
     private GoogleApiClient client;
 
     public static AvailableGamesList gamesList;
+    public static User user;
     public static final String host = "arcade.plotsandschemes.com";
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         gamesList = new AvailableGamesList();
+        user = new User();
+        //friendsList = new AvailableFriendsList();
 
         setContentView(R.layout.activity_main);
 
@@ -206,6 +217,8 @@ public class MainActivity extends AppCompatActivity {
             // implement community here
             if (getArguments().getInt(ARG_SECTION_NUMBER) == 2) {
                 View rootView = inflater.inflate(R.layout.fragment_community, container, false);
+
+                rootView = createLoginPage(rootView);
                 return rootView;
 
             // removed tab
@@ -215,6 +228,34 @@ public class MainActivity extends AppCompatActivity {
             }
 
         }
+
+        View createLoginPage(final View rootView) {
+            EditText username, password;
+
+            Button button = (Button)rootView.findViewById(R.id.button0);
+            button.setOnClickListener(new Button.OnClickListener() {
+                public void onClick(View v) {
+                    EditText password = (EditText)rootView.findViewById(R.id.editText0);
+                    EditText username = (EditText)rootView.findViewById(R.id.editText1);
+
+                    String pString = password.getText().toString();
+                    String uString = username.getText().toString();
+
+                    String request = "login:" + uString + "," + pString;
+                    user.setPassword(pString);
+                    user.setUserName(uString);
+                    user.login();
+                }
+            });
+
+            password = (EditText)rootView.findViewById(R.id.editText0);
+            username = (EditText)rootView.findViewById(R.id.editText1);
+
+            Editable pString = password.getText();
+            Editable uString = username.getText();
+            return rootView;
+        }
+
 
         View populateGamesList(final View rootView) {
             ArrayList<String> gameNames;
@@ -236,7 +277,7 @@ public class MainActivity extends AppCompatActivity {
                             if (clickedGame.download())
                                 downloadConfirmation = "Download Complete";
                             else
-                                downloadConfirmation = "Failed to Downlaod";
+                                downloadConfirmation = "Failed to Download";
                         } catch (Exception e) {
                             e.printStackTrace();
                             downloadConfirmation = "IOException";
@@ -253,6 +294,9 @@ public class MainActivity extends AppCompatActivity {
             return rootView;
         }
     }
+
+
+
     public static class CustomListViewAdapter extends ArrayAdapter<Game> {
         Context context;
 
@@ -333,16 +377,31 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    /**
-     * Allows the store tab to send data to MainActivity
-     */
-    public class StoreInterface implements store.OnFragmentInteractionListener {
+    public class User {
+        String userName;
+        String password;
 
-        @Override
-        public void onFragmentInteraction(Uri uri) {
-            // probably delete later
+        User() {
+
         }
 
+        User(String name, String password) {
+            this.userName = name;
+            this.password = password;
+        }
+
+        public void setUserName(String name) {
+            this.userName = name;
+        }
+
+        public void setPassword(String password) {
+            this.password = password;
+        }
+
+        public void login() {
+            String request = "password:" + userName + "," + password;
+            new serverRequestLogin().execute(request);
+        }
     }
 
     /**
@@ -563,6 +622,18 @@ public class MainActivity extends AppCompatActivity {
             return gamesFromServer;
         }
 
+        boolean sendRequest(Socket socket, String request) {
+            try {
+                OutputStream toServer = socket.getOutputStream();
+                PrintWriter messageToServer = new PrintWriter(toServer, true);
+                messageToServer.println(request);
+                return true;
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            return false;
+        }
+
         byte[] getResponse(Socket client) {
             InputStream in;
             byte[] gamesFromServer = new byte[3000000];
@@ -584,18 +655,6 @@ public class MainActivity extends AppCompatActivity {
             }
 
             return gamesFromServer;
-        }
-
-        boolean sendRequest(Socket socket, String request) {
-            try {
-                OutputStream toServer = socket.getOutputStream();
-                PrintWriter messageToServer = new PrintWriter(toServer, true);
-                messageToServer.println(request);
-                return true;
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            return false;
         }
     }
 
@@ -622,6 +681,21 @@ public class MainActivity extends AppCompatActivity {
 
                 MainActivity.gamesList.addGame(new Game(gameName));
                 i++;
+            }
+        }
+    }
+
+    private class serverRequestLogin extends serverRequest {
+        @Override
+        protected void onPostExecute(byte[] result) {
+
+            String passFail = new String(result);
+
+
+            if (passFail == "1") {
+                MainActivity.loggedIn = true;
+            } else {
+                MainActivity.loggedIn = false;
             }
         }
     }

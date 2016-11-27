@@ -4,6 +4,7 @@
     <modules>
       <module fileurl="file://$PROJECT_DIR$/Arcade.iml" filepath="$PROJECT_DIR$/Arcade.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/arcade-manager.iml" filepath="$PROJECT_DIR$/arcade-manager.iml" />
       <module fileurl="file://$PROJECT_DIR$/ftp4j-1.7.2/ftp4j-1.7.2.iml" filepath="$PROJECT_DIR$/ftp4j-1.7.2/ftp4j-1.7.2.iml" />
     </modules>
   </component>
