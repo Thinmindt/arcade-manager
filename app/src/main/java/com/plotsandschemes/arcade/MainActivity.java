@@ -65,6 +65,7 @@ public class MainActivity extends AppCompatActivity {
 
     private static final int MY_PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE = 25;
     private static boolean loggedIn;
+    private static AvailableFriendsList friendsList;
 
     /**
      * The {@link PagerAdapter} that will provide
@@ -98,7 +99,7 @@ public class MainActivity extends AppCompatActivity {
 
         gamesList = new AvailableGamesList();
         user = new User();
-        //friendsList = new AvailableFriendsList();
+        friendsList = new AvailableFriendsList();
 
         setContentView(R.layout.activity_main);
 
@@ -241,18 +242,19 @@ public class MainActivity extends AppCompatActivity {
                     String pString = password.getText().toString();
                     String uString = username.getText().toString();
 
-                    String request = "login:" + uString + "," + pString;
+                    //String request = "login:" + uString + "," + pString;
                     user.setPassword(pString);
                     user.setUserName(uString);
                     user.login();
                 }
             });
 
-            password = (EditText)rootView.findViewById(R.id.editText0);
-            username = (EditText)rootView.findViewById(R.id.editText1);
+            //password = (EditText)rootView.findViewById(R.id.editText0);
+            //username = (EditText)rootView.findViewById(R.id.editText1);
 
-            Editable pString = password.getText();
-            Editable uString = username.getText();
+            //Editable pString = password.getText();
+            //Editable uString = username.getText();
+
             return rootView;
         }
 
@@ -382,12 +384,17 @@ public class MainActivity extends AppCompatActivity {
         String password;
 
         User() {
-
+            userName = null;
+            password = null;
         }
 
         User(String name, String password) {
             this.userName = name;
             this.password = password;
+        }
+
+        public String getName() {
+            return this.userName;
         }
 
         public void setUserName(String name) {
@@ -457,17 +464,64 @@ public class MainActivity extends AppCompatActivity {
             listOfGames.clear();
         }
 
-        void checkForAPKs() {
-            // iterate through listOfGames
-            // check filesystem for APK
-            // if APK exists, set pathToAPK and isDownloaded
-        }
-
         void addGame(Game game) {
             listOfGames.add(game);
         }
     }
 
+    public class AvailableFriendsList {
+        private LinkedList<Friend> listOfFriends;
+
+        AvailableFriendsList() {
+            this.listOfFriends = new LinkedList<Friend>();
+            getFullFriendsList();
+        }
+
+        public ArrayList<String> getFriendNames() {
+            ArrayList<String> friendNames = new ArrayList<String>();
+            Iterator it = listOfFriends.iterator();
+            while (it.hasNext()) {
+                Friend friend = (Friend) it.next();
+                friendNames.add(friend.getName());
+            }
+            return friendNames;
+        }
+
+        public LinkedList<Friend> getLinkedListOfFriends() {
+            return listOfFriends;
+        }
+
+        public Friend getFriendByName(String name) {
+            Iterator it = listOfFriends.iterator();
+            while (it.hasNext()) {
+                Friend friend = (Friend) it.next();
+                if (friend.getName() == name) {
+                    return friend;
+                }
+            }
+            return null;
+        }
+
+        void getFullFriendsList() {
+            String request = "friendsList";
+            ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+            NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
+            if (networkInfo != null && networkInfo.isConnected()) {
+                new serverRequestFriendsList().execute(request);
+            } else {
+                listOfFriends.clear();
+                Toast.makeText(getApplicationContext(), "No network connection", Toast.LENGTH_SHORT).show();
+            }
+        }
+
+        void clear() {
+            listOfFriends.clear();
+        }
+
+        void addFriend(Friend friend) {
+            listOfFriends.add(friend);
+        }
+    }
 
     /**
      * A game contains meta info and path to apk in android filesystem for each game as needed.
@@ -603,6 +657,64 @@ public class MainActivity extends AppCompatActivity {
         boolean getIsInstalled() { return isInstalled; }
     }
 
+    private class Friend {
+        private String name;
+
+        Friend(String name) {
+            this.name = name;
+        }
+
+        String getName() {
+            return this.name;
+        }
+
+       /* boolean download() {
+            InputStream inStream;
+            OutputStream outStream;
+            int permissionCheck = ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.READ_EXTERNAL_STORAGE);
+            if (permissionCheck == PERMISSION_DENIED) {
+                ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, MY_PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE);
+            }
+
+            File toDownloads = new File("storage/emulated/0/Arcade/Downloads/" + name + ".apk");
+            if (toDownloads.exists()) {
+                install();
+                return true;
+            }
+            else {
+                try {
+                    File fromServer = new File("storage/emulated/0/Arcade/FromServer/" + name + ".apk");
+
+                    File downloadDirectory = new File("storage/emulated/0/Arcade/Downloads/");
+                    if (!downloadDirectory.exists()) {
+                        downloadDirectory.mkdirs();
+                    }
+
+                    inStream = new FileInputStream(fromServer);
+                    outStream = new FileOutputStream(toDownloads);
+
+                    byte[] buffer = new byte[1024];
+                    int length;
+                    while ((length = inStream.read(buffer)) > 0) {
+                        outStream.write(buffer, 0, length);
+                    }
+
+                    inStream.close();
+
+                    outStream.flush();
+                    outStream.close();
+
+
+                    isDownloaded = true;
+                    return true;
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    return false;
+                }
+            }
+        }*/
+    }
+
     private class serverRequest extends AsyncTask<String, Void, byte[]> {
 
         @Override
@@ -689,13 +801,42 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected void onPostExecute(byte[] result) {
 
-            String passFail = new String(result);
+            String reply = new String(result);
 
 
-            if (passFail == "1") {
+            if (reply.equals("Approved")) {
                 MainActivity.loggedIn = true;
+                new serverRequestFriendsList().execute(MainActivity.user.getName());
             } else {
                 MainActivity.loggedIn = false;
+            }
+        }
+    }
+
+    private class serverRequestFriendsList extends serverRequest {
+
+        @Override
+        protected void onPostExecute(byte[] result) {
+
+            String friendsFromServer = new String(result);
+            MainActivity.friendsList.clear();
+
+            int i = 0;
+            while (friendsFromServer != null) {
+                int start = 0;
+                int end = friendsFromServer.length();
+                if (friendsFromServer.contains(",")) {
+                    end = friendsFromServer.indexOf(",");
+                }
+                String friendName = friendsFromServer.substring(start, end);
+
+                if (end < friendsFromServer.length())
+                    friendsFromServer= friendsFromServer.substring(end + 1, friendsFromServer.length());
+                else
+                    friendsFromServer = null;
+
+                MainActivity.friendsList.addFriend(new Friend(friendName));
+                i++;
             }
         }
     }
