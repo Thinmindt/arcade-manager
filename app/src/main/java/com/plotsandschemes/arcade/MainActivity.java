@@ -806,7 +806,8 @@ public class MainActivity extends AppCompatActivity {
 
             if (reply.equals("Approved")) {
                 MainActivity.loggedIn = true;
-                new serverRequestFriendsList().execute(MainActivity.user.getName());
+                String payload = "friendsList:" + MainActivity.user.getName();
+                new serverRequestFriendsList().execute(payload);
             } else {
                 MainActivity.loggedIn = false;
             }
