@@ -219,7 +219,7 @@ public class MainActivity extends AppCompatActivity {
             if (getArguments().getInt(ARG_SECTION_NUMBER) == 2) {
                 View rootView = inflater.inflate(R.layout.fragment_community, container, false);
 
-                rootView = createLoginPage(rootView);
+                //rootView = createLoginPage(rootView);
                 return rootView;
 
             // removed tab
@@ -580,16 +580,16 @@ public class MainActivity extends AppCompatActivity {
                 ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, MY_PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE);
             }
 
-            File toDownloads = new File("storage/emulated/0/Arcade/Downloads/" + name + ".apk");
+            File toDownloads = new File("Arcade/Downloads/" + name + ".apk");
             if (toDownloads.exists()) {
                 install();
                 return true;
             }
             else {
                 try {
-                    File fromServer = new File("storage/emulated/0/Arcade/FromServer/" + name + ".apk");
+                    File fromServer = new File("Arcade/FromServer/" + name + ".apk");
 
-                    File downloadDirectory = new File("storage/emulated/0/Arcade/Downloads/");
+                    File downloadDirectory = new File("Arcade/Downloads/");
                     if (!downloadDirectory.exists()) {
                         downloadDirectory.mkdirs();
                     }
