@@ -574,16 +574,17 @@ public class MainActivity extends AppCompatActivity {
                 ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, MY_PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE);
             }
 
-            File toDownloads = new File("Arcade/Downloads/" + name + ".apk");
+
+            File toDownloads = new File("storage/emulated/0/Arcade/Downloads/" + name + ".apk");
             if (toDownloads.exists()) {
                 install();
                 return true;
             }
             else {
                 try {
-                    File fromServer = new File("Arcade/FromServer/" + name + ".apk");
+                    File fromServer = new File("storage/emulated/0/Arcade/FromServer/" + name + ".apk");
 
-                    File downloadDirectory = new File("Arcade/Downloads/");
+                    File downloadDirectory = new File("storage/emulated/0/Arcade/Downloads/");
                     if (!downloadDirectory.exists()) {
                         downloadDirectory.mkdirs();
                     }
@@ -803,6 +804,7 @@ public class MainActivity extends AppCompatActivity {
                 String payload = "friendsList:" + MainActivity.user.getName();
                 new serverRequestFriendsList().execute(payload);
             } else {
+                Toast.makeText(getApplicationContext(), "Login Failed", Toast.LENGTH_SHORT).show();
                 MainActivity.loggedIn = false;
             }
         }
