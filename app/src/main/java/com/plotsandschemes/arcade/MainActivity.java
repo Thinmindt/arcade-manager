@@ -219,7 +219,7 @@ public class MainActivity extends AppCompatActivity {
             if (getArguments().getInt(ARG_SECTION_NUMBER) == 2) {
                 View rootView = inflater.inflate(R.layout.fragment_community, container, false);
 
-                //rootView = createLoginPage(rootView);
+                rootView = createLoginPage(rootView);
                 return rootView;
 
             // removed tab
@@ -248,12 +248,6 @@ public class MainActivity extends AppCompatActivity {
                     user.login();
                 }
             });
-
-            //password = (EditText)rootView.findViewById(R.id.editText0);
-            //username = (EditText)rootView.findViewById(R.id.editText1);
-
-            //Editable pString = password.getText();
-            //Editable uString = username.getText();
 
             return rootView;
         }
